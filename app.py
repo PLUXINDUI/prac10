@@ -106,27 +106,16 @@ import requests
 from io import BytesIO
 from urllib.parse import urljoin
 
-# Конфигурация приложения
-st.set_page_config(
-    page_title="🌍 Конвертер координат",
-    page_icon="🌍",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="🌍 Конвертер координат", layout="wide")
 
-# Укажи URL твоего FastAPI бэкенда
-BACKEND_URL = "https://prac10.onrender.com"  # Меняй на свой, если бэкенд не локальный
+BACKEND_URL = "https://prac10.onrender.com"
 
-# Доступные системы координат
 COORD_SYSTEMS = [
     "СК-42", "СК-95", "ПЗ-90", "ПЗ-90.02", "ПЗ-90.11",
     "WGS-84 (G1150)", "ITRF-2008", "ГСК-2011"
 ]
 
-# --- Функции для взаимодействия с API ---
-
 def check_api_status():
-    """Проверяем доступность API"""
     try:
         response = requests.get(BACKEND_URL, timeout=10)
         return response.status_code == 200
@@ -134,72 +123,47 @@ def check_api_status():
         return False
 
 def convert_coordinates(file, source_system, target_system):
-    """Отправляем файл на обработку и получаем результат преобразования"""
     url = urljoin(BACKEND_URL, "/convert-coordinates/")
-    files = {"file": file.getvalue(), "filename": file.name}
-    data = {
-        "source_system": source_system,
-        "target_system": target_system
-    }
-    try:
-        response = requests.post(url, files={"file": (file.name, file.getvalue(), file.type)}, data=data)
-        if response.status_code == 200:
-            return pd.read_csv(BytesIO(response.content))
-        else:
-            st.error(f"Ошибка при преобразовании: {response.text}")
-            return None
-    except Exception as e:
-        st.error(f"Ошибка соединения с API: {str(e)}")
-        return None
-
-def generate_excel_report(file, source_system, target_system):
-    """Формируем Excel-отчет через API"""
-    url = urljoin(BACKEND_URL, "/generate-report/")
     files = {"file": (file.name, file.getvalue(), file.type)}
-    data = {
-        "source_system": source_system,
-        "target_system": target_system
-    }
+    data = {"source_system": source_system, "target_system": target_system}
     try:
         response = requests.post(url, files=files, data=data)
         if response.status_code == 200:
             return BytesIO(response.content)
         else:
-            st.error(f"Ошибка при генерации отчёта: {response.text}")
+            st.error(f"Ошибка: {response.text}")
             return None
     except Exception as e:
-        st.error(f"Ошибка соединения с API: {str(e)}")
+        st.error(f"Ошибка связи с API: {str(e)}")
         return None
 
-# --- Интерфейс Streamlit ---
+def generate_markdown_report(file, source_system, target_system):
+    url = urljoin(BACKEND_URL, "/generate-report/")
+    files = {"file": (file.name, file.getvalue(), file.type)}
+    data = {"source_system": source_system, "target_system": target_system}
+    try:
+        response = requests.post(url, files=files, data=data)
+        if response.status_code == 200:
+            return BytesIO(response.content)
+        else:
+            st.error(f"Ошибка: {response.text}")
+            return None
+    except Exception as e:
+        st.error(f"Ошибка связи с API: {str(e)}")
+        return None
 
 def main():
     st.title("🌍 Конвертер координат между системами")
-    st.markdown("""
-    Этот инструмент позволяет загрузить CSV или Excel-файл с координатами 
-    и преобразовать их из одной системы координат в другую.
-    
-    Поддерживаемые системы:
-    - СК-42
-    - СК-95
-    - ПЗ-90
-    - ПЗ-90.02
-    - ПЗ-90.11
-    - WGS-84 (G1150)
-    - ITRF-2008
-    - ГСК-2011
-    """)
+    st.markdown("Загрузите CSV или Excel файл и преобразуйте координаты между системами.")
 
-    # Проверка статуса API
-    # if not check_api_status():
-    #     st.error("⚠️ Не удалось подключиться к API. Пожалуйста, проверьте статус бэкенда.")
-    #     return
+    if not check_api_status():
+        st.error("⚠️ Не удалось подключиться к API. Убедитесь, что бэкенд запущен.")
+        return
 
     uploaded_file = st.file_uploader("Выберите CSV или Excel файл", type=['csv', 'xlsx', 'xls'])
 
     if uploaded_file is not None:
         try:
-            # Чтение файла для предпросмотра
             if uploaded_file.name.endswith('.csv'):
                 df = pd.read_csv(uploaded_file)
             else:
@@ -213,10 +177,8 @@ def main():
             st.subheader("📥 Предварительный просмотр данных")
             st.dataframe(df.head())
 
-            # Сброс указателя файла для повторного чтения
             uploaded_file.seek(0)
 
-            # Выбор систем координат
             col1, col2 = st.columns(2)
             with col1:
                 source_system = st.selectbox("Исходная система", options=COORD_SYSTEMS)
@@ -224,35 +186,29 @@ def main():
                 target_system = st.selectbox("Целевая система", options=COORD_SYSTEMS)
 
             if st.button("🚀 Преобразовать координаты"):
-                with st.spinner("Преобразование координат..."):
-                    result_df = convert_coordinates(uploaded_file, source_system, target_system)
-                if isinstance(result_df, pd.DataFrame):
-                    st.subheader("✅ Результат преобразования")
-                    st.dataframe(result_df.head())
+                with st.spinner("Преобразование..."):
+                    converted_data = convert_coordinates(uploaded_file, source_system, target_system)
+                if converted_data:
                     st.download_button(
-                        label="⬇️ Скачать CSV с результатами",
-                        data=result_df.to_csv(index=False),
+                        label="⬇️ Скачать CSV",
+                        data=converted_data,
                         file_name="converted.csv",
                         mime="text/csv"
                     )
 
-            if st.button("📄 Скачать отчет (Markdown)"):
-                with st.spinner("Формируем отчет..."):
-                    result_df = convert_coordinates(uploaded_file, source_system, target_system)
-    
-            if isinstance(result_df, pd.DataFrame):
-                markdown_report = generate_markdown_report(df, result_df, source_system, target_system)
-        
-                # Позволяет пользователю скачать файл
-                st.download_button(
-                    label="⬇️ Скачать Markdown-отчет",
-                    data=markdown_report,
-                    file_name=f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                    mime="text/markdown"
-                )
+            if st.button("📄 Сформировать Markdown-отчет"):
+                with st.spinner("Формирование отчёта..."):
+                    report_data = generate_markdown_report(uploaded_file, source_system, target_system)
+                if report_data:
+                    st.download_button(
+                        label="⬇️ Скачать Markdown-отчет",
+                        data=report_data,
+                        file_name="report.md",
+                        mime="text/markdown"
+                    )
 
         except Exception as e:
-            st.error(f"❌ Ошибка при обработке файла: {str(e)}")
+            st.error(f"❌ Ошибка: {str(e)}")
 
 if __name__ == "__main__":
     main()

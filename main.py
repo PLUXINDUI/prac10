@@ -151,7 +151,8 @@
 #     return report
 
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+# main.py
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 import pandas as pd
@@ -160,11 +161,10 @@ import csv
 import random
 import string
 from sympy import Matrix, symbols, N
-from typing import Optional
 
 app = FastAPI(
     title="Конвертер координат",
-    description="API для преобразования координат между системами и генерации отчётов в Excel",
+    description="API для преобразования координат между системами и генерации отчётов в Markdown",
     version="1.0.0"
 )
 
@@ -181,17 +181,63 @@ def generate_csv(file_path: str, num_rows: int):
         for _ in range(num_rows):
             writer.writerow([random_name(), random_number(), random_number(), random_number()])
 
-# --- 2. Параметры перехода между системами ---
+# --- 2. Создание параметров перехода ---
 def create_default_parameters(file_path: str = "parameters.json"):
     parameters = {
-        "СК-42": {"ΔX": 23.56, "ΔY": -140.86, "ΔZ": -79.77, "ωx": -8.423e-09, "ωy": -1.678e-06, "ωz": -3.849e-06, "m": -0.2274},
-        "СК-95": {"ΔX": 24.46, "ΔY": -130.80, "ΔZ": -81.53, "ωx": -8.423e-09, "ωy": 1.724e-08, "ωz": -6.511e-07, "m": -0.2274},
-        "ПЗ-90": {"ΔX": -1.443, "ΔY": 0.142, "ΔZ": 0.230, "ωx": -8.423e-09, "ωy": 1.724e-08, "ωz": -6.511e-07, "m": -0.2274},
-        "ПЗ-90.02": {"ΔX": -0.373, "ΔY": 0.172, "ΔZ": 0.210, "ωx": -8.423e-09, "ωy": 1.724e-08, "ωz": -2.061e-08, "m": -0.0074},
-        "ПЗ-90.11": {"ΔX": 0.0, "ΔY": -0.014, "ΔZ": 0.008, "ωx": 2.724e-09, "ωy": 9.212e-11, "ωz": -2.566e-10, "m": 0.0006},
-        "WGS-84 (G1150)": {"ΔX": -0.013, "ΔY": 0.092, "ΔZ": 0.030, "ωx": -8.423e-09, "ωy": 1.724e-08, "ωz": -2.061e-08, "m": -0.0074},
-        "ITRF-2008": {"ΔX": 0.003, "ΔY": -0.013, "ΔZ": 0.008, "ωx": 2.633e-09, "ωy": 2.909e-10, "ωz": -2.667e-10, "m": 0.0006},
-        "ГСК-2011": {"ΔX": 0, "ΔY": 0, "ΔZ": 0, "ωx": 0, "ωy": 0, "ωz": 0, "m": 0}
+        "СК-42": {
+            "ΔX": 23.56,
+            "ΔY": -140.86,
+            "ΔZ": -79.77,
+            "ωx": -8.423e-09,
+            "ωy": -1.678e-06,
+            "ωz": -3.849e-06,
+            "m": -0.2274
+        },
+        "СК-95": {
+            "ΔX": 24.46,
+            "ΔY": -130.80,
+            "ΔZ": -81.53,
+            "ωx": -8.423e-09,
+            "ωy": 1.724e-08,
+            "ωz": -6.511e-07,
+            "m": -0.2274
+        },
+        "ПЗ-90": {
+            "ΔX": -1.443,
+            "ΔY": 0.142,
+            "ΔZ": 0.230,
+            "ωx": -8.423e-09,
+            "ωy": 1.724e-08,
+            "ωz": -6.511e-07,
+            "m": -0.2274
+        },
+        "ПЗ-90.02": {
+            "ΔX": -0.373,
+            "ΔY": 0.172,
+            "ΔZ": 0.210,
+            "ωx": -8.423e-09,
+            "ωy": 1.724e-08,
+            "ωz": -2.061e-08,
+            "m": -0.0074
+        },
+        "ПЗ-90.11": {
+            "ΔX": 0.0,
+            "ΔY": -0.014,
+            "ΔZ": 0.008,
+            "ωx": 2.724e-09,
+            "ωy": 9.212e-11,
+            "ωz": -2.566e-10,
+            "m": 0.0006
+        },
+        "ГСК-2011": {
+            "ΔX": 0,
+            "ΔY": 0,
+            "ΔZ": 0,
+            "ωx": 0,
+            "ωy": 0,
+            "ωz": 0,
+            "m": 0
+        }
     }
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(parameters, f, ensure_ascii=False, indent=4)
@@ -201,12 +247,12 @@ def GSK_2011(
     sk1: str,
     sk2: str,
     parameters_path: str,
-    df: Optional[pd.DataFrame] = None,
+    df: pd.DataFrame,
     save_path: Optional[str] = None
 ) -> pd.DataFrame:
     if sk1 == "СК-95" and sk2 == "СК-42":
         df_temp = GSK_2011("СК-95", "ПЗ-90.11", parameters_path, df=df)
-        df_result = GSK_2011("ПЗ-90.11", "СК-42", parameters_path, df=df_temp, save_path=save_path)
+        df_result = GSK_2011("ПЗ-90.11", "СК-42", parameters_path, df=df_temp)
         return df_result
 
     ΔX, ΔY, ΔZ, ωx, ωy, ωz, m = symbols('ΔX ΔY ΔZ ωx ωy ωz m')
@@ -247,73 +293,88 @@ def GSK_2011(
             float(results_vector[2]),
         ])
 
-    df_result = pd.DataFrame(transformed, columns=["Name", "X'", "Y'", "Z'"])
+    df_result = pd.DataFrame(transformed, columns=["Name", "X", "Y", "Z"])
     if save_path:
         df_result.to_csv(save_path, index=False)
     return df_result
 
-# --- 4. Генерация отчета в Excel ---
-def generate_excel_report(df_before: pd.DataFrame, df_after: pd.DataFrame, source_system: str, target_system: str) -> BytesIO:
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        # Исходные данные
-        df_before.to_excel(writer, sheet_name='До преобразования', index=False)
-        # После преобразования
-        df_after.to_excel(writer, sheet_name='После преобразования', index=False)
+# --- 4. Формирование Markdown-отчёта ---
+def generate_markdown_report(df_before: pd.DataFrame, df_after: pd.DataFrame, source_system: str, target_system: str) -> str:
+    report = "# Отчёт по преобразованию координат\n"
+    report += f"Исходная система: {source_system}\n"
+    report += f"Конечная система: {target_system}\n\n"
 
-        # Лист с информацией
-        info_df = pd.DataFrame({
-            "Описание": [
-                "Дата создания",
-                "Исходная система",
-                "Целевая система",
-                "Количество точек"
-            ],
-            "Значение": [
-                pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"),
-                source_system,
-                target_system,
-                len(df_before)
-            ]
-        })
-        info_df.to_excel(writer, sheet_name='Информация', index=False)
+    # Общая формула
+    report += "## 1. Общая формула\n"
+    report += "$$ \n"
+    report += r"\begin{bmatrix} X' \\ Y' \\ Z' \end{bmatrix} = (1 + m) \cdot " \
+              r"\begin{bmatrix} 1 & \omega_z & -\omega_y \\ -\omega_z & 1 & \omega_x \\ \omega_y & -\omega_x & 1 \end{bmatrix} \cdot " \
+              r"\begin{bmatrix} X \\ Y \\ Z \end{bmatrix} + " \
+              r"\begin{bmatrix} \Delta X \\ \Delta Y \\ \Delta Z \end{bmatrix}"
+    report += "\n$$\n\n"
 
-    output.seek(0)
-    return output
+    # Подстановка параметров
+    report += "## 2. Формула с подстановкой параметров\n"
+    report += "$$ \n"
+    report += r"\begin{bmatrix} X' \\ Y' \\ Z' \end{bmatrix} = " \
+              r"\begin{bmatrix} 0.9999997726 X - 3.8489991247374 \cdot 10^{-6} Y + 1.6779996184228 \cdot 10^{-6} Z + 23.56 \\ " \
+              r"3.8489991247374 \cdot 10^{-6} X + 0.9999997726 Y - 8.4229980846098 \cdot 10^{-9} Z - 140.86 \\ " \
+              r"-1.6779996184228 \cdot 10^{-6} X + 8.4229980846098 \cdot 10^{-9} Y + 0.9999997726 Z - 79.77 \end{bmatrix}"
+    report += "\n$$\n\n"
+
+    # Пример вычисления первой точки
+    first_before = df_before.iloc[0]
+    first_after = df_after.iloc[0]
+    report += "## 3. Пример для первой точки\n"
+    report += "Исходные: $X=%.6f,\\;Y=%.6f,\\;Z=%.6f$\n" % (
+        first_before['X'], first_before['Y'], first_before['Z'])
+    report += "$$ \n"
+    report += r"\begin{bmatrix} %.6f \\ %.6f \\ %.6f \end{bmatrix}" % (
+        first_after['X'], first_after['Y'], first_after['Z'])
+    report += "\n$$\n"
+    report += "Численный результат: $X'=%.6f,\\;Y'=%.6f,\\;Z'=%.6f$\n\n" % (
+        first_after['X'], first_after['Y'], first_after['Z'])
+
+    # Таблица до и после
+    report += "## 4. Таблица до и после и статистика\n"
+    report += "| Name | X | Y | Z | X' | Y' | Z' |\n"
+    report += "| --- | --- | --- | --- | --- | --- | --- |\n"
+    for i in range(min(10, len(df_before))):
+        b = df_before.iloc[i]
+        a = df_after.iloc[i]
+        report += f"| {b['Name']} | {b['X']:.6f} | {b['Y']:.6f} | {b['Z']:.6f} | {a['X']:.6f} | {a['Y']:.6f} | {a['Z']:.6f} |\n"
+    report += "\n"
+
+    # Статистика
+    report += "## Статистика (X', Y', Z')\n"
+    report += "- mean: X'=%.3f, Y'=%.3f, Z'=%.3f\n" % (
+        df_after['X'].mean(), df_after['Y'].mean(), df_after['Z'].mean())
+    report += "- std: X'=%.3f, Y'=%.3f, Z'=%.3f\n" % (
+        df_after['X'].std(), df_after['Y'].std(), df_after['Z'].std())
+
+    return report
 
 # --- 5. Эндпоинты API ---
-
-@app.get("/")
-def read_root():
-    return {
-        "message": "API для преобразования координат работает!",
-        "endpoints": {
-            "/convert-coordinates/": "Преобразование координат",
-            "/generate-report/": "Генерация отчёта в Excel"
-        }
-    }
 
 @app.post("/convert-coordinates/")
 async def convert_coordinates(
     file: UploadFile = File(...),
-    source_system: str = "СК-42",
-    target_system: str = "ГСК-2011"
+    source_system: str = Form("СК-42"),
+    target_system: str = Form("ГСК-2011")
 ):
-    if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
-        raise HTTPException(status_code=400, detail="Поддерживаются только .xlsx, .xls или .csv")
+    if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Поддерживаются только .csv или .xlsx/.xls")
+
     try:
+        contents = await file.read()
         input_path = "input.csv"
         output_path = "converted.csv"
         parameters_path = "parameters.json"
 
-        contents = await file.read()
-        with open(input_path, "wb") as f:
-            f.write(contents)
-
         if file.filename.endswith(".csv"):
-            df = pd.read_csv(input_path)
+            df = pd.read_csv(BytesIO(contents))
         else:
-            df = pd.read_excel(input_path)
+            df = pd.read_excel(BytesIO(contents))
 
         required_columns = ["Name", "X", "Y", "Z"]
         if not all(col in df.columns for col in required_columns):
@@ -338,38 +399,38 @@ async def convert_coordinates(
 @app.post("/generate-report/")
 async def generate_report(
     file: UploadFile = File(...),
-    source_system: str = "СК-42",
-    target_system: str = "ГСК-2011"
+    source_system: str = Form("СК-42"),
+    target_system: str = Form("ГСК-2011")
 ):
-    if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
-        raise HTTPException(status_code=400, detail="Поддерживаются только .xlsx, .xls или .csv")
+    if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Поддерживаются только .csv или .xlsx/.xls")
+
     try:
+        contents = await file.read()
         input_path = "input.csv"
         parameters_path = "parameters.json"
 
-        contents = await file.read()
-        with open(input_path, "wb") as f:
-            f.write(contents)
-
         if file.filename.endswith(".csv"):
-            df = pd.read_csv(input_path)
+            df = pd.read_csv(BytesIO(contents))
         else:
-            df = pd.read_excel(input_path)
+            df = pd.read_excel(BytesIO(contents))
 
         required_columns = ["Name", "X", "Y", "Z"]
         if not all(col in df.columns for col in required_columns):
             raise HTTPException(status_code=400, detail=f"Файл должен содержать колонки: {required_columns}")
 
         create_default_parameters(parameters_path)
-        df_result = GSK_2011(sk1=source_system, sk2=target_system, parameters_path=parameters_path, df=df.copy())
+        result_df = GSK_2011(sk1=source_system, sk2=target_system, parameters_path=parameters_path, df=df.copy())
 
-        excel_report = generate_excel_report(df, df_result, source_system, target_system)
-        filename = f"report_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        markdown_report = generate_markdown_report(df, result_df, source_system, target_system)
+        output = BytesIO(markdown_report.encode('utf-8'))
+        output.seek(0)
 
+        filename = f"report_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.md"
         return StreamingResponse(
-            excel_report,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            output,
+            media_type="text/markdown",
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка при генерации отчёта: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка при формировании отчёта: {str(e)}")
