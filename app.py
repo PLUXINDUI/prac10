@@ -191,9 +191,9 @@ def main():
     """)
 
     # Проверка статуса API
-    if not check_api_status():
-        st.error("⚠️ Не удалось подключиться к API. Пожалуйста, проверьте статус бэкенда.")
-        return
+    # if not check_api_status():
+    #     st.error("⚠️ Не удалось подключиться к API. Пожалуйста, проверьте статус бэкенда.")
+    #     return
 
     uploaded_file = st.file_uploader("Выберите CSV или Excel файл", type=['csv', 'xlsx', 'xls'])
 
