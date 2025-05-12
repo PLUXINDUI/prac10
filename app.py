@@ -236,17 +236,20 @@ def main():
                         mime="text/csv"
                     )
 
-            if st.button("📊 Сформировать отчет в Excel"):
-                with st.spinner("Формирование отчета..."):
-                    report_data = generate_excel_report(uploaded_file, source_system, target_system)
-                if report_data:
-                    st.success("✅ Отчет успешно создан!")
-                    st.download_button(
-                        label="⬇️ Скачать Excel-отчет",
-                        data=report_data,
-                        file_name="report.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
+            if st.button("📄 Скачать отчет (Markdown)"):
+                with st.spinner("Формируем отчет..."):
+                    result_df = convert_coordinates(uploaded_file, source_system, target_system)
+    
+            if isinstance(result_df, pd.DataFrame):
+                markdown_report = generate_markdown_report(df, result_df, source_system, target_system)
+        
+                # Позволяет пользователю скачать файл
+                st.download_button(
+                    label="⬇️ Скачать Markdown-отчет",
+                    data=markdown_report,
+                    file_name=f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                    mime="text/markdown"
+                )
 
         except Exception as e:
             st.error(f"❌ Ошибка при обработке файла: {str(e)}")
