@@ -161,6 +161,7 @@ import csv
 import random
 import string
 from sympy import Matrix, symbols, N
+from typing import Optional
 
 app = FastAPI(
     title="Конвертер координат",
