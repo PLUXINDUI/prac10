@@ -151,7 +151,8 @@
 #     return report
 
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, StreamingResponse
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import StreamingResponse
 from io import BytesIO
 import pandas as pd
 import json
