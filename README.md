@@ -83,7 +83,9 @@ $$
 \begin{bmatrix} X' \\ 
 Y' \\ 
 Z' 
-\end{bmatrix}= (1 + m) \cdot
+\end{bmatrix}
+$$
+= (1 + m) \cdot
 \begin{bmatrix} 1 & \omega_z & -\omega_y \\
                 -\omega_z & 1 & \omega_x \\
                 \omega_y & -\omega_x & 1 \end{bmatrix}
