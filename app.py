@@ -115,7 +115,7 @@ st.set_page_config(
 )
 
 # Укажи URL твоего FastAPI бэкенда
-BACKEND_URL = "http://localhost:8000"  # Меняй на свой, если бэкенд не локальный
+BACKEND_URL = "https://prac10.onrender.com"  # Меняй на свой, если бэкенд не локальный
 
 # Доступные системы координат
 COORD_SYSTEMS = [
