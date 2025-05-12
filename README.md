@@ -80,19 +80,35 @@ streamlit run app.py
 2. 🔁 Приложение отправляет файл на FastAPI-бэкенд с указанием исходной и целевой систем координат.
 3. 🧮 Бэкенд выполняет преобразование координат по формуле:
 $$
-\begin{bmatrix} X' \\ 
-Y' \\ 
-Z' 
-\end{bmatrix}
-$$
+\left[
+\begin{array}{c}
+X' \\
+Y' \\
+Z'
+\end{array}
+\right]
 = (1 + m) \cdot
-\begin{bmatrix} 1 & \omega_z & -\omega_y \\
-                -\omega_z & 1 & \omega_x \\
-                \omega_y & -\omega_x & 1 \end{bmatrix}
+\begin{bmatrix} 
+1 & \omega_z & -\omega_y \\
+-\omega_z & 1 & \omega_x \\
+\omega_y & -\omega_x & 1 
+\end{bmatrix}
 \cdot
-\begin{bmatrix} X \\ Y \\ Z \end{bmatrix}
+\left[
+\begin{array}{c}
+X \\
+Y \\
+Z
+\end{array}
+\right]
 +
-\begin{bmatrix} \Delta X \\ \Delta Y \\ \Delta Z \end{bmatrix}
+\left[
+\begin{array}{c}
+\Delta X \\
+\Delta Y \\
+\Delta Z
+\end{array}
+\right]
 $$
    с подстановкой конкретных параметров из `parameters.json`.
 4. 📋 Результат сохраняется в виде CSV и формируется отчет в формате Markdown.
@@ -126,11 +142,3 @@ $$
 
 📜 Лицензия
 Проект распространяется под MIT-лицензией. Подробности доступны в файле [LICENSE](https://mit-license.org/license.txt).
-
-$$
-\begin{pmatrix}
-a_{11} & a_{12} & a_{13}\\
-a_{21} & a_{22} & a_{23}\\
-a_{31} & a_{32} & a_{33}
-\end{pmatrix}
-$$
